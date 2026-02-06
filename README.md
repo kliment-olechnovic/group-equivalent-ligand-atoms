@@ -47,7 +47,7 @@ wget 'https://files.rcsb.org/download/2HHB.cif'
 Then run the script and save the output to a file:
 
 ```bash
-python3 ./group-equivalent-ligand-atoms.py ./2HHB.pdb > ./table.tsv
+python3 ./group-equivalent-ligand-atoms.py ./2HHB.cif > ./table.tsv
 ```
 
 The file `table.tsv` should contain a table where each row corresponds to an atom that belongs to a multi-member equivalence class within a ligand:
