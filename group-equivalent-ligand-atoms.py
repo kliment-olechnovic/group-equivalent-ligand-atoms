@@ -1,21 +1,5 @@
 #!/usr/bin/env python3
 
-#
-# DO WHAT THE FUCK YOU WANT TO PUBLIC LICENSE
-# Version 2, December 2004
-#
-# Copyright © 2026 Kliment Olechnovic
-#
-# Everyone is permitted to copy and distribute verbatim or modified
-# copies of this license document, and changing it is allowed as long
-# as the name is changed.
-#
-# DO WHAT THE FUCK YOU WANT TO PUBLIC LICENSE
-# TERMS AND CONDITIONS FOR COPYING, DISTRIBUTION AND MODIFICATION
-#
-# 0. You just DO WHAT THE FUCK YOU WANT TO.
-#
-
 import sys
 import os
 from collections import defaultdict, Counter
@@ -24,11 +8,8 @@ import gemmi
 from rdkit import Chem
 from rdkit.Chem import rdDetermineBonds
 
-AA = {
-	"ALA","ARG","ASN","ASP","CYS","GLN","GLU","GLY","HIS","ILE",
-	"LEU","LYS","MET","PHE","PRO","SER","THR","TRP","TYR","VAL"
-}
-NT = {"A","C","G","U","T","DA","DC","DG","DT","RA","RC","RG","RU"}
+AA = {"ALA","ARG","ASN","ASP","CYS","GLN","GLU","GLY","HIS","ILE", "LEU","LYS","MET","PHE","PRO","SER","THR","TRP","TYR","VAL"}
+NT = {"A","C","G","U","T","DA","DC","DG","DT"}
 
 def is_polymer_resname(name: str) -> bool:
 	name = (name or "").strip().upper()
@@ -108,9 +89,8 @@ def iter_ligand_residue_instances(structure: gemmi.Structure):
 def select_ligands_max_atoms_per_resname(structure: gemmi.Structure):
 	best = {}
 	for resname, natoms, chain_id, res in iter_ligand_residue_instances(structure):
-		key = resname
-		if key not in best or natoms > best[key][0]:
-			best[key] = (natoms, chain_id, res)
+		if resname not in best or natoms > best[resname][0]:
+			best[resname] = (natoms, chain_id, res)
 	return [(resname, v[1], v[2]) for resname, v in best.items()]
 
 def main():
@@ -123,7 +103,7 @@ def main():
 	structure = gemmi.read_structure(in_path)
 	selected = select_ligands_max_atoms_per_resname(structure)
 
-	print("residue_name\tatom_name\tconflated_atom_name")
+	#print("residue_name\tatom_name\tconflated_atom_name")
 
 	if not selected:
 		print("No ligand-like residues found (non-polymer, non-water).", file=sys.stderr)
@@ -133,13 +113,11 @@ def main():
 		mol = rdkit_mol_from_residue(res, chain_id)
 		eq = equivalence_classes(mol)
 
-		# Count class sizes
 		counts = Counter(eq)
 		keep_classes = {c for c, n in counts.items() if n >= 2}
 		if not keep_classes:
 			continue
 
-		# Output only atoms in multi-member classes
 		for atom in mol.GetAtoms():
 			cls = eq[atom.GetIdx()]
 			if cls not in keep_classes:
@@ -147,7 +125,11 @@ def main():
 			info = atom.GetPDBResidueInfo()
 			if info is None:
 				continue
-			print(f"{info.GetResidueName().strip()}\t{info.GetName().strip()}\tX{cls}")
+
+			element = atom.GetSymbol()
+			eq_label = f"{element}X{cls}"
+
+			print(f"{info.GetResidueName().strip()}\t{info.GetName().strip()}\t{eq_label}")
 
 if __name__ == "__main__":
 	main()

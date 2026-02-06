@@ -1,5 +1,4 @@
-residue_name	atom_name	conflated_atom_name
-HEM	O1A	X7
-HEM	O2A	X7
-HEM	O1D	X6
-HEM	O2D	X6
+HEM	O1A	OX7
+HEM	O2A	OX7
+HEM	O1D	OX6
+HEM	O2D	OX6

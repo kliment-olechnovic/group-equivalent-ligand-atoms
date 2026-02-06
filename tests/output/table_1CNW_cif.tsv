@@ -1,3 +1,2 @@
-residue_name	atom_name	conflated_atom_name
-EG1	O1	X4
-EG1	O2	X4
+EG1	O1	OX4
+EG1	O2	OX4
