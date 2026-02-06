@@ -18,6 +18,7 @@
 
 import sys
 import os
+from collections import defaultdict, Counter
 
 import gemmi
 from rdkit import Chem
@@ -35,12 +36,6 @@ def is_polymer_resname(name: str) -> bool:
 
 def is_water(name: str) -> bool:
 	return (name or "").strip().upper() in {"HOH", "WAT", "DOD"}
-
-def normalize_ext(path: str) -> str:
-	base = os.path.basename(path).lower()
-	if base.endswith(".mmcif"):
-		return ".cif"
-	return os.path.splitext(base)[1]
 
 def residue_to_pdb_block(res: gemmi.Residue, chain_id: str) -> str:
 	st = gemmi.Structure()
@@ -90,10 +85,10 @@ def rdkit_mol_from_residue(res: gemmi.Residue, chain_id: str) -> Chem.Mol:
 def equivalence_classes(mol: Chem.Mol):
 	ranks = list(Chem.CanonicalRankAtoms(mol, breakTies=False))
 	uniq = sorted(set(ranks))
-	remap = {r:i for i, r in enumerate(uniq)}
+	remap = {r: i for i, r in enumerate(uniq)}
 	return [remap[r] for r in ranks]
 
-def ligand_residues(structure: gemmi.Structure):
+def iter_ligand_residue_instances(structure: gemmi.Structure):
 	for model in structure:
 		for chain in model:
 			chain_id = chain.name.strip() or "A"
@@ -105,9 +100,18 @@ def ligand_residues(structure: gemmi.Structure):
 					continue
 				if is_polymer_resname(resname):
 					continue
-				if len(res) < 2:
+				natoms = len(res)
+				if natoms < 2:
 					continue
-				yield chain_id, res
+				yield resname, natoms, chain_id, res
+
+def select_ligands_max_atoms_per_resname(structure: gemmi.Structure):
+	best = {}
+	for resname, natoms, chain_id, res in iter_ligand_residue_instances(structure):
+		key = resname
+		if key not in best or natoms > best[key][0]:
+			best[key] = (natoms, chain_id, res)
+	return [(resname, v[1], v[2]) for resname, v in best.items()]
 
 def main():
 	if len(sys.argv) != 2:
@@ -115,24 +119,35 @@ def main():
 		sys.exit(2)
 
 	in_path = sys.argv[1]
-	ext = normalize_ext(in_path)
 
 	structure = gemmi.read_structure(in_path)
+	selected = select_ligands_max_atoms_per_resname(structure)
 
-	print("residue_name\tatom_name\tequivalence_class")
+	print("residue_name\tatom_name\tconflated_atom_name")
 
-	for chain_id, res in ligand_residues(structure):
+	if not selected:
+		print("No ligand-like residues found (non-polymer, non-water).", file=sys.stderr)
+		return
+
+	for resname, chain_id, res in selected:
 		mol = rdkit_mol_from_residue(res, chain_id)
 		eq = equivalence_classes(mol)
 
+		# Count class sizes
+		counts = Counter(eq)
+		keep_classes = {c for c, n in counts.items() if n >= 2}
+		if not keep_classes:
+			continue
+
+		# Output only atoms in multi-member classes
 		for atom in mol.GetAtoms():
+			cls = eq[atom.GetIdx()]
+			if cls not in keep_classes:
+				continue
 			info = atom.GetPDBResidueInfo()
 			if info is None:
 				continue
-			resn = info.GetResidueName().strip()
-			an   = info.GetName().strip()
-			cls  = eq[atom.GetIdx()]
-			print(f"{resn}\t{an}\t{cls}")
+			print(f"{info.GetResidueName().strip()}\t{info.GetName().strip()}\tX{cls}")
 
 if __name__ == "__main__":
 	main()

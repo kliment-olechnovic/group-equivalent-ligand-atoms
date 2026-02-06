@@ -21,6 +21,8 @@ do
 	python3 -B "../group-equivalent-ligand-atoms.py" "${INFILE}" > "./output/table_${BASENAME}.tsv"
 done
 
+python3 -B "../group-equivalent-ligand-atoms.py" 2> "./output/help_mesage.txt"
+
 ################################################################################
 
 git status -s ./output/
