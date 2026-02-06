@@ -61,6 +61,8 @@ def rdkit_mol_from_residue(res: gemmi.Residue, chain_id: str) -> Chem.Mol:
 	except Exception:
 		pass
 
+	mol = Chem.RemoveHs(mol)
+
 	return mol
 
 def equivalence_classes(mol: Chem.Mol):
