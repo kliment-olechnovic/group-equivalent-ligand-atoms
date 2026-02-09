@@ -36,6 +36,18 @@ pip install rdkit
 pip install gemmi
 ```
 
+Or, install using the `requirements.txt` file:
+
+```bash
+pip install -r requirements.txt
+```
+
+The script was tested with:
+
+* Python version 3.12.3
+* Gemmi version 0.7.4
+* RDKIT version 2025.9.4
+
 # Example
 
 Get a molecular structure file, for example:
